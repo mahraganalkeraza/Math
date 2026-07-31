@@ -78,6 +78,25 @@
       background-color: #ffffff !important;
     }
 
+    /* Prevent splitting question containers, cards, tables, and rows across pages */
+    .section-card,
+    .header-card,
+    .number-box,
+    .sequence-row,
+    .inline-eq,
+    .question-card,
+    .question-box,
+    .question-container,
+    .avoid-break,
+    table,
+    tr,
+    tbody tr,
+    .grid > div {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      -webkit-column-break-inside: avoid !important;
+    }
+
     .page-break {
       break-before: page !important;
       page-break-before: always !important;
