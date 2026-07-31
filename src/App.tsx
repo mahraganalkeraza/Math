@@ -13,8 +13,6 @@ import { PrintableWorksheet } from './components/PrintableWorksheet';
 import { WorksheetGenerator } from './components/WorksheetGenerator';
 import { ScoreModal } from './components/ScoreModal';
 
-import { downloadPDF } from './utils/pdfPrint';
-
 export default function App() {
   const [mode, setMode] = useState<'interactive' | 'printable' | 'generator'>('interactive');
   const [currentGradeId, setCurrentGradeId] = useState<GradeId>('kg2');
@@ -46,10 +44,14 @@ export default function App() {
 
   const [showScoreModal, setShowScoreModal] = useState<boolean>(false);
 
-  const handleDirectDownload = async () => {
+  const handleDirectDownload = () => {
     try {
-      const title = `${currentGradeId.toUpperCase()}_Math_Revision_Booklet`;
-      await downloadPDF(title, 'printable-worksheet');
+      const originalTitle = document.title;
+      document.title = `${currentGradeId.toUpperCase()}_Math_Revision_Booklet`;
+      window.print();
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
     } catch (error) {
       console.error('Print/Export Error:', error);
     }
@@ -129,17 +131,14 @@ export default function App() {
           />
         )}
 
-        <div
-          id="printable-worksheet-wrapper"
-          style={{ display: mode === 'printable' ? 'block' : 'none' }}
-        >
+        {mode === 'printable' && (
           <PrintableWorksheet
             worksheet={worksheet}
             studentInfo={studentInfo}
             showAnswers={showAnswers}
             studentAnswers={studentAnswers}
           />
-        </div>
+        )}
 
         {mode === 'generator' && (
           <WorksheetGenerator

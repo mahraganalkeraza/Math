@@ -3,7 +3,6 @@ import { Download, Sparkles, Edit3, Eye, CheckCircle2, User, Volume2, FileText, 
 import { StudentInfo, ExamId, GradeId, ExamMeta } from '../types';
 import { gradeList } from '../data/bookletsData';
 import { speakText } from '../utils/speech';
-import { downloadPDF } from '../utils/pdfPrint';
 
 interface HeaderProps {
   mode: 'interactive' | 'printable' | 'generator';
@@ -42,10 +41,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   const activeGradeMeta = gradeList.find((g) => g.id === currentGradeId) || gradeList[1];
 
-  const handleDirectDownload = async () => {
+  const handleDirectDownload = () => {
     try {
-      const dynamicTitle = `${currentGradeId.toUpperCase()}_Math_Revision_Booklet`;
-      await downloadPDF(dynamicTitle, 'printable-worksheet');
+      const originalTitle = document.title;
+      document.title = `${currentGradeId.toUpperCase()}_Math_Revision_Booklet`;
+      window.print();
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
     } catch (error) {
       console.error('Print/Export Error:', error);
     }
