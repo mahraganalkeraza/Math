@@ -3,20 +3,22 @@
  * Direct browser printing (window.print()) natively handles modern CSS color
  * functions like `oklch` without canvas parsing errors, producing high-fidelity vector PDF output.
  */
-export async function downloadPDF(documentTitle: string = 'Math_KG2_Revision'): Promise<void> {
+export function downloadPDF(documentTitle: string = 'Math_KG2_Revision'): void {
   const previousTitle = document.title;
-  const sanitizedTitle = documentTitle.replace(/[^a-zA-Z0-9_-]/g, '_');
+  
+  // تنظيف العنوان مع دعم الحروف العربية والإنجليزية والأرقام والشرطات
+  const sanitizedTitle = documentTitle.trim().replace(/[^\w\u0600-\u06FF-]/g, '_');
 
   try {
-    // Set document title so native browser print suggests this file name when saving to PDF
-    document.title = sanitizedTitle;
+    // ضبط عنوان المستند ليعتمده المتصفح كاسم للملف عند الحفظ كـ PDF
+    document.title = sanitizedTitle || 'Math_Revision_Booklet';
 
-    // Direct browser print is the most reliable & error-free way to handle oklch & Tailwind v4
+    // استدعاء نافذة الطباعة المباشرة من المتصفح
     window.print();
   } catch (err) {
-    console.warn('Native print call completed:', err);
+    console.error('Native print call failed:', err);
   } finally {
-    // Restore original document title after print dialog closes
+    // استعادة العنوان الأصلي للمستند بعد فتح نافذة الطباعة
     setTimeout(() => {
       document.title = previousTitle;
     }, 1000);
