@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { WorksheetData, StudentInfo } from '../types';
 import { ShapeRenderer } from './ShapeRenderer';
+import { BanknoteVisual } from './BanknoteVisual';
+import { TensOnesVisual } from './CountAndMatchSection';
 import { examsData } from '../data/examsData';
 import { Download, FileText, CheckCircle2 } from 'lucide-react';
 import { triggerPrint, downloadPDF } from '../utils/pdfPrint';
@@ -10,6 +12,7 @@ interface PrintableWorksheetProps {
   studentInfo: StudentInfo;
   showAnswers: boolean;
   studentAnswers?: Record<string, any>;
+  examsData?: Record<string, WorksheetData>;
 }
 
 export const PrintableWorksheet: React.FC<PrintableWorksheetProps> = ({
@@ -17,8 +20,10 @@ export const PrintableWorksheet: React.FC<PrintableWorksheetProps> = ({
   studentInfo,
   showAnswers,
   studentAnswers = {},
+  examsData: examsDataProp,
 }) => {
   const [viewMode, setViewMode] = useState<'single' | 'full'>('single');
+  const examsDataToUse = examsDataProp || examsData;
 
   const renderSingleExam = (ws: WorksheetData, examLabel?: string) => {
     let sectionIndex = 1;
@@ -214,28 +219,95 @@ export const PrintableWorksheet: React.FC<PrintableWorksheetProps> = ({
           )}
 
           {/* Section: Currency Items */}
-          {ws.currencyItems && ws.currencyItems.length > 0 && (
-            <div className="section-card bg-slate-50 border border-slate-200 border-l-[5px] border-l-blue-900 rounded-lg p-3.5 mb-4">
-              <div className="section-title text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                <span className="q-num bg-blue-900 text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">
-                  {sectionIndex++}
-                </span>
-                Match Egyptian currency values to images / amounts:
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {ws.currencyItems.map((curr) => (
-                  <div key={curr.id} className="bg-white p-2.5 rounded-lg border border-slate-200 text-center flex flex-col items-center justify-between">
-                    <div className="px-3 py-1 rounded text-white font-serif font-black text-xs" style={{ backgroundColor: curr.color }}>
-                      {curr.label}
-                    </div>
-                    <div className="text-xs font-bold text-slate-700 mt-2">
-                      {curr.valueText}
-                    </div>
+          {ws.currencyItems && ws.currencyItems.length > 0 && (() => {
+            const shuffledCurrencyItems = [...ws.currencyItems].sort((a, b) => {
+              const scoreA = (a.amount * 7) % 13;
+              const scoreB = (b.amount * 7) % 13;
+              return scoreA - scoreB;
+            });
+
+            return (
+              <div className="section-card bg-[#FDFCFB] border-2 border-[#1e3a8a] rounded-lg p-3.5 mb-4 shadow-[3px_3px_0px_#1e3a8a] break-inside-avoid">
+                <div className="section-title text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <span className="q-num bg-[#1e3a8a] text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">
+                    {sectionIndex++}
+                  </span>
+                  Match each Egyptian currency value to its correct banknote (draw a line):
+                </div>
+
+                <div className="grid grid-cols-12 gap-1 items-stretch my-2 relative">
+                  {/* Left Column: Amounts */}
+                  <div className="col-span-4 flex flex-col gap-4 justify-around py-1">
+                    {ws.currencyItems.map((curr) => {
+                      const correctRightIndex = shuffledCurrencyItems.findIndex((r) => r.amount === curr.amount);
+                      const letterLabel = String.fromCharCode(65 + correctRightIndex); // A, B, C, etc.
+
+                      return (
+                        <div
+                          key={`left-${curr.id}`}
+                          className="bg-white p-2 px-3 rounded-xl border-2 border-slate-200 shadow-sm flex flex-col justify-center relative min-h-[4.5rem]"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-serif font-black text-[#1e3a8a] leading-tight">
+                                {curr.label}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-bold">
+                                {curr.amount === 1 ? 'One Pound' : curr.amount === 5 ? 'Five Pounds' : curr.amount === 10 ? 'Ten Pounds' : curr.amount === 20 ? 'Twenty Pounds' : curr.amount === 50 ? 'Fifty Pounds' : curr.amount === 100 ? 'One Hundred Pounds' : curr.amount === 200 ? 'Two Hundred Pounds' : `${curr.amount} Pounds`}
+                              </span>
+                            </div>
+                            
+                            {/* Connection dot */}
+                            <div className="w-3.5 h-3.5 rounded-full border-2 border-[#1e3a8a] bg-white flex-shrink-0 absolute right-0 translate-x-[1.3rem] z-10 shadow-sm"></div>
+                          </div>
+
+                          {showAnswers && (
+                            <div className="mt-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 w-max leading-none">
+                              Answer: [{letterLabel}]
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
+
+                  {/* Middle Column: Line Indicator */}
+                  <div className="col-span-4 flex flex-col items-center justify-center relative min-h-[14rem]">
+                    <div className="absolute inset-y-0 w-0 border-l-2 border-dashed border-slate-200"></div>
+                    <span className="bg-[#FDFCFB] px-2 py-0.5 text-[8px] font-black text-slate-400 z-10 rounded-full border border-slate-200 uppercase tracking-widest leading-none">
+                      Draw Lines
+                    </span>
+                  </div>
+
+                  {/* Right Column: Banknote Images */}
+                  <div className="col-span-4 flex flex-col gap-4 justify-around py-1">
+                    {shuffledCurrencyItems.map((curr, idx) => {
+                      const letterLabel = String.fromCharCode(65 + idx); // A, B, C...
+
+                      return (
+                        <div
+                          key={`right-${curr.id}`}
+                          className="flex items-center justify-start relative min-h-[4.5rem]"
+                        >
+                          {/* Connection dot */}
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-[#1e3a8a] bg-white flex-shrink-0 absolute left-0 -translate-x-[1.3rem] z-10 shadow-sm"></div>
+                          
+                          <div className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm h-16 w-32 bg-white flex items-center justify-center p-1 relative">
+                            <BanknoteVisual amount={curr.amount} className="w-full h-full object-contain" />
+                            
+                            {/* Letter ID label for matching reference */}
+                            <div className="absolute bottom-1 right-1 bg-[#1e3a8a] text-white text-[9px] font-black w-4.5 h-4.5 rounded flex items-center justify-center border border-white leading-none">
+                              {letterLabel}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Section: Height Comparisons */}
           {ws.heightComparisons && ws.heightComparisons.length > 0 && (
@@ -269,10 +341,12 @@ export const PrintableWorksheet: React.FC<PrintableWorksheetProps> = ({
                 </span>
                 Count and match with numbers (55, 65, 35, 45):
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {ws.countAndMatchSets.map((set) => (
-                  <div key={set.id} className="bg-white p-3 rounded-lg border border-slate-200 text-center flex flex-col items-center justify-between">
-                    <div className="text-2xl mb-1">{set.symbol}</div>
+                  <div key={set.id} className="bg-white p-3 rounded-lg border border-slate-200 text-center flex flex-col items-center justify-between break-inside-avoid">
+                    <div className="w-full mb-2">
+                      <TensOnesVisual count={set.count} symbol={set.symbol} label={set.label} />
+                    </div>
                     <div className="font-bold text-xs text-slate-800">{set.label}</div>
                     <div className="mt-2 text-xs font-bold text-blue-900">
                       Match: <span className="underline font-black">{showAnswers ? set.count : (studentAnswers[set.id] || '____')}</span>
@@ -751,7 +825,13 @@ export const PrintableWorksheet: React.FC<PrintableWorksheetProps> = ({
 
           <button
             type="button"
-            onClick={() => downloadPDF(viewMode === 'full' ? 'KG2_Math_Revision_Booklet' : (activeWorksheet.title || 'Math_Worksheet'))}
+            onClick={() =>
+              downloadPDF(
+                viewMode === 'full'
+                  ? `${(activeWorksheet.grade || 'KG2').replace(/\s+/g, '_')}_Complete_Math_Booklet`
+                  : `${(activeWorksheet.grade || 'KG2').replace(/\s+/g, '_')}_${(activeWorksheet.title || 'Math_Worksheet').replace(/\s+/g, '_')}`
+              )
+            }
             className="px-5 py-2 bg-[#f59e0b] hover:bg-amber-400 text-[#0f172a] rounded-xl text-xs font-serif font-black shadow-[3px_3px_0px_#0f172a] flex items-center gap-2 transition-all transform hover:scale-105 cursor-pointer no-print"
           >
             <Download size={15} /> Save / Print PDF
@@ -760,17 +840,17 @@ export const PrintableWorksheet: React.FC<PrintableWorksheetProps> = ({
       </div>
 
       {/* Render Single Active Revision or All 5 Parts */}
-      <div className="w-full max-w-4xl flex flex-col items-center">
+      <div id="printable-worksheet" className="w-full max-w-4xl flex flex-col items-center">
         {viewMode === 'single' ? (
           renderSingleExam(activeWorksheet)
         ) : (
           <div className="w-full space-y-8">
             <div className="text-center bg-[#1e3a8a] text-white p-6 rounded-2xl border-2 border-[#1e3a8a] shadow-[6px_6px_0px_#f59e0b] no-print">
-              <h2 className="text-2xl font-serif font-black text-[#f59e0b]">Complete KG2 Revision Booklet</h2>
-              <p className="text-xs text-slate-200 mt-1">Includes Revision Part (1) through Part (5) full revisions. Click Download PDF to export.</p>
+              <h2 className="text-2xl font-serif font-black text-[#f59e0b]">Complete {activeWorksheet.grade || 'KG2'} Booklet</h2>
+              <p className="text-xs text-slate-200 mt-1">Includes all active lessons/parts in this booklet. Click Save / Print PDF to export.</p>
             </div>
-            {Object.entries(examsData).map(([key, examWs]) =>
-              renderSingleExam(examWs, key)
+            {Object.entries(examsDataToUse).map(([key, examWs]) =>
+              renderSingleExam(examWs as WorksheetData, key)
             )}
           </div>
         )}

@@ -5,7 +5,7 @@ export interface StudentInfo {
   teacherName: string;
 }
 
-export type ExamId = 'exam1' | 'exam2' | 'exam3' | 'exam4' | 'exam5' | 'custom';
+export type ExamId = 'exam1' | 'exam2' | 'exam3' | 'exam4' | 'exam5' | 'exam6' | 'exam7' | 'exam8' | 'exam9' | 'exam10' | 'exam11' | 'exam12' | 'exam13' | 'exam14' | 'exam15' | 'exam16' | 'exam17' | 'custom';
 export type GradeId = 'kg1' | 'kg2' | 'g1' | 'g2' | 'g3' | 'g4';
 
 export interface GradeMeta {

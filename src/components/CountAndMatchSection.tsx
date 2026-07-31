@@ -7,6 +7,82 @@ export interface CountAndMatchItem {
   symbol: string;
 }
 
+interface TensOnesVisualProps {
+  count: number;
+  symbol: string;
+  label: string;
+}
+
+export const TensOnesVisual: React.FC<TensOnesVisualProps> = ({ count, symbol, label }) => {
+  const tens = Math.floor(count / 10);
+  const ones = count % 10;
+
+  return (
+    <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-200 mb-3 w-full flex flex-col gap-3">
+      {/* Tens Groups */}
+      {tens > 0 && (
+        <div className="flex flex-col gap-1.5 w-full">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-500 bg-slate-200/50 px-1.5 py-0.5 rounded uppercase tracking-wider select-none">
+              Tens ({tens})
+            </span>
+            <span className="text-[10px] text-slate-400 font-bold">
+              = {tens * 10}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            {Array.from({ length: tens }).map((_, tIdx) => (
+              <div 
+                key={`ten-${tIdx}`} 
+                className="border-2 border-slate-300 bg-white p-1.5 rounded-lg grid grid-cols-5 gap-1 justify-center items-center shadow-sm select-none break-inside-avoid print:border-slate-400 shrink-0"
+                title="Group of 10"
+              >
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <span key={i} className="text-base leading-none transition-transform hover:scale-125">
+                    {symbol}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Divider */}
+      {tens > 0 && ones > 0 && (
+        <div className="w-full border-t border-slate-200/60 my-0.5" />
+      )}
+
+      {/* Loose Ones */}
+      {ones > 0 && (
+        <div className="flex flex-col gap-1.5 w-full">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-500 bg-slate-200/50 px-1.5 py-0.5 rounded uppercase tracking-wider select-none">
+              Ones ({ones})
+            </span>
+            <span className="text-[10px] text-slate-400 font-bold">
+              = {ones}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            {Array.from({ length: ones }).map((_, oIdx) => (
+              <div
+                key={`one-${oIdx}`}
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center shadow-sm select-none hover:border-[#1e3a8a]/30 transition-colors"
+                title="1 One"
+              >
+                <span className="text-lg leading-none transition-transform hover:scale-125">
+                  {symbol}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface CountAndMatchSectionProps {
   items?: CountAndMatchItem[];
   studentAnswers?: Record<string, any>;
@@ -54,18 +130,8 @@ export default function CountAndMatchSection({
                 </span>
               </div>
 
-              {/* Symbol Container */}
-              <div className="flex flex-wrap gap-1 max-h-28 overflow-y-auto p-2 bg-white rounded-lg border border-gray-200 mb-3 shadow-inner">
-                {Array.from({ length: set.count }).map((_, index) => (
-                  <span 
-                    key={index} 
-                    className="text-base sm:text-lg leading-none select-none hover:scale-125 transition-transform"
-                    title={`Item ${index + 1}`}
-                  >
-                    {set.symbol}
-                  </span>
-                ))}
-              </div>
+              {/* Refactored Tens & Ones Symbol Container */}
+              <TensOnesVisual count={set.count} symbol={set.symbol} label={set.label} />
 
               {/* Input field if callback provided */}
               {onAnswerChange && (

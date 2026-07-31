@@ -102,12 +102,9 @@ export const defaultWorksheet: WorksheetData = {
   ],
 
   currencyItems: [
-    { id: 'curr-10', label: '10 LE', valueText: '(a) 10 pounds', amount: 10, color: '#16a34a' },
-    { id: 'curr-100', label: '100 LE', valueText: '(b) 100 pounds', amount: 100, color: '#2563eb' },
-    { id: 'curr-5', label: '5 LE', valueText: '(c) 5 pounds', amount: 5, color: '#d97706' },
-    { id: 'curr-1', label: '1 LE', valueText: '(d) 1 pound', amount: 1, color: '#6b7280' },
-    { id: 'curr-200', label: '200 LE', valueText: '(e) 200 pounds', amount: 200, color: '#9333ea' },
-    { id: 'curr-50', label: '50 LE', valueText: '(f) 50 pounds', amount: 50, color: '#dc2626' },
+    { id: 'curr-1', label: '1 LE', valueText: '1 pound', amount: 1, color: '#64748b' },
+    { id: 'curr-50', label: '50 LE', valueText: '50 pounds', amount: 50, color: '#e11d48' },
+    { id: 'curr-200', label: '200 LE', valueText: '200 pounds', amount: 200, color: '#854d0e' },
   ],
 
   countAndMatchSets: [

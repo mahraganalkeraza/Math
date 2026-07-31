@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { WorksheetData, StudentInfo, QuestionGradeResult } from '../types';
 import { Volume2, RefreshCw, Sparkles } from 'lucide-react';
 import { speakText } from '../utils/speech';
 import { ShapeRenderer } from './ShapeRenderer';
 import CountAndMatchSection from './CountAndMatchSection';
+import { BanknoteVisual } from './BanknoteVisual';
 import confetti from 'canvas-confetti';
 
 interface InteractiveModeProps {
@@ -23,10 +24,21 @@ export const InteractiveMode: React.FC<InteractiveModeProps> = ({
 }) => {
   const [graded, setGraded] = useState(false);
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
+  const [selectedLeftId, setSelectedLeftId] = useState<string | null>(null);
 
   const updateAnswer = (key: string, value: any) => {
     setStudentAnswers((prev) => ({ ...prev, [key]: value }));
   };
+
+  const shuffledCurrencyItems = useMemo(() => {
+    if (!worksheet.currencyItems) return [];
+    return [...worksheet.currencyItems].sort((a, b) => {
+      // Deterministic shuffle based on amount to avoid matching side-by-side
+      const scoreA = (a.amount * 7) % 13;
+      const scoreB = (b.amount * 7) % 13;
+      return scoreA - scoreB;
+    });
+  }, [worksheet.currencyItems]);
 
   const handleShapeClick = (boxId: string, total: number) => {
     const current = itemCounts[boxId] || 0;
@@ -467,6 +479,27 @@ export const InteractiveMode: React.FC<InteractiveModeProps> = ({
       });
     }
 
+    // Egyptian Currency Matching
+    if (worksheet.currencyItems && worksheet.currencyItems.length > 0) {
+      let subScore = 0;
+      worksheet.currencyItems.forEach((curr) => {
+        total++;
+        // The student matched answer should map left item id to 'banknote-' + current item amount
+        if (studentAnswers[`currency-${curr.id}`] === `banknote-${curr.amount}`) {
+          subScore++;
+        }
+      });
+      earned += subScore;
+      results.push({
+        questionId: 'currency',
+        title: 'Egyptian Currency Matching',
+        maxScore: worksheet.currencyItems.length,
+        earnedScore: subScore,
+        isFullyCorrect: subScore === worksheet.currencyItems.length,
+        feedback: 'Excellent! You successfully matched the Egyptian banknotes to their correct values.',
+      });
+    }
+
     if (total === 0) total = 1;
     setGraded(true);
 
@@ -860,6 +893,197 @@ export const InteractiveMode: React.FC<InteractiveModeProps> = ({
                   <span className="font-serif font-black text-[#1e3a8a] text-lg">{cmp.rightExpr}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Match Egyptian Currency Values */}
+        {worksheet.currencyItems && worksheet.currencyItems.length > 0 && (
+          <div className="bg-white rounded-2xl p-6 border-2 border-[#1e3a8a] shadow-[6px_6px_0px_#1e3a8a]">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-slate-100">
+              <h3 className="font-serif font-black text-[#1e3a8a] text-xl">
+                Match Egyptian Currency Values:
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    worksheet.currencyItems?.forEach((curr) => {
+                      updateAnswer(`currency-${curr.id}`, undefined);
+                    });
+                    setSelectedLeftId(null);
+                  }}
+                  className="px-3 py-1 text-xs font-bold text-[#1e3a8a] border border-[#1e3a8a]/20 hover:bg-slate-50 rounded-lg cursor-pointer transition-all"
+                >
+                  Reset Match
+                </button>
+                <button onClick={() => speakText('Match each Egyptian currency value on the left to its correct banknote on the right! Click a value, then click the banknote image.')} className="p-2 text-slate-400 hover:text-[#f59e0b] cursor-pointer">
+                  <Volume2 size={20} />
+                </button>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 mb-6 font-medium">
+              💡 <span className="font-bold text-[#1e3a8a]">How to play:</span> Tap a blue numerical card on the left column, then tap its matching visual banknote card on the right column to connect them!
+            </p>
+
+            <div className="relative grid grid-cols-12 gap-4 min-h-[20rem]">
+              {/* SVG Connector Layer */}
+              <div className="absolute inset-0 grid grid-cols-12 pointer-events-none z-10">
+                <div className="col-start-5 col-span-4 h-full relative">
+                  <svg className="absolute inset-0 w-full h-full overflow-visible" xmlns="http://www.w3.org/2000/svg">
+                    {worksheet.currencyItems.map((leftItem, idxL) => {
+                      const rightValue = studentAnswers[`currency-${leftItem.id}`];
+                      if (!rightValue) return null;
+
+                      const idxR = shuffledCurrencyItems.findIndex((r) => `banknote-${r.amount}` === rightValue);
+                      if (idxR === -1) return null;
+
+                      const N = worksheet.currencyItems.length;
+                      const yL = ((idxL + 0.5) / N) * 100;
+                      const yR = ((idxR + 0.5) / shuffledCurrencyItems.length) * 100;
+
+                      let strokeColor = '#3b82f6';
+                      let isDashed = false;
+
+                      if (graded) {
+                        const isCorrect = `banknote-${leftItem.amount}` === rightValue;
+                        strokeColor = isCorrect ? '#22c55e' : '#ef4444';
+                        isDashed = !isCorrect;
+                      } else if (selectedLeftId === leftItem.id) {
+                        strokeColor = '#f59e0b';
+                      }
+
+                      return (
+                        <path
+                          key={leftItem.id}
+                          d={`M 0,${yL}% C 50,${yL}% 50,${yR}% 100,${yR}%`}
+                          fill="none"
+                          stroke={strokeColor}
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeDasharray={isDashed ? '8 4' : 'none'}
+                          className="transition-all duration-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)]"
+                        />
+                      );
+                    })}
+                  </svg>
+                </div>
+              </div>
+
+              {/* Left Column: Numerical Badges */}
+              <div className="col-span-4 flex flex-col justify-around h-full py-2 z-20 gap-4">
+                {worksheet.currencyItems.map((curr) => {
+                  const isSelected = selectedLeftId === curr.id;
+                  const hasConnection = !!studentAnswers[`currency-${curr.id}`];
+                  
+                  let cardBorderColor = 'border-[#1e3a8a]/20';
+                  let glowStyle = '';
+                  
+                  if (isSelected) {
+                    cardBorderColor = 'border-[#f59e0b] bg-amber-50/50 scale-102';
+                    glowStyle = 'ring-4 ring-amber-400/20';
+                  } else if (hasConnection) {
+                    cardBorderColor = 'border-emerald-200 bg-emerald-50/10';
+                  }
+
+                  if (graded) {
+                    const isCorrect = studentAnswers[`currency-${curr.id}`] === `banknote-${curr.amount}`;
+                    cardBorderColor = isCorrect ? 'border-emerald-500 bg-emerald-50/40' : 'border-rose-400 bg-rose-50/40';
+                  }
+
+                  return (
+                    <button
+                      key={`left-${curr.id}`}
+                      onClick={() => {
+                        if (studentAnswers[`currency-${curr.id}`]) {
+                          updateAnswer(`currency-${curr.id}`, undefined);
+                        } else {
+                          setSelectedLeftId(isSelected ? null : curr.id);
+                        }
+                      }}
+                      className={`w-full h-20 text-left px-4 rounded-2xl border-2 bg-[#FDFCFB] flex items-center justify-between transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md ${cardBorderColor} ${glowStyle}`}
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-serif font-black text-[#1e3a8a] text-lg leading-tight">
+                          {curr.label}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-500 font-sans mt-0.5">
+                          {curr.amount === 1 ? 'جنيه واحد' : curr.amount === 5 ? '٥ جنيهات' : curr.amount === 10 ? '١٠ جنيهات' : curr.amount === 20 ? '٢٠ جنيهاً' : curr.amount === 50 ? '٥٠ جنيهاً' : curr.amount === 100 ? '١٠٠ جنيه' : curr.amount === 200 ? '٢٠٠ جنيه' : `${curr.amount} EGP`}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        {hasConnection && !graded && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        )}
+                        <div className={`w-4 h-4 rounded-full border-3 flex-shrink-0 transition-all ${
+                          isSelected ? 'bg-[#f59e0b] border-[#1e3a8a]' :
+                          hasConnection ? 'bg-emerald-500 border-white shadow-sm' : 'bg-white border-[#1e3a8a]/30'
+                        }`}></div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Middle Spacer */}
+              <div className="col-span-4 h-full pointer-events-none"></div>
+
+              {/* Right Column: Banknote Images */}
+              <div className="col-span-4 flex flex-col justify-around h-full py-2 z-20 gap-4">
+                {shuffledCurrencyItems.map((curr) => {
+                  const banknoteId = `banknote-${curr.amount}`;
+                  
+                  let matchedLeftItem: typeof curr | undefined = undefined;
+                  if (worksheet.currencyItems) {
+                    matchedLeftItem = worksheet.currencyItems.find(
+                      (leftItem) => studentAnswers[`currency-${leftItem.id}`] === banknoteId
+                    );
+                  }
+                  
+                  const isMatched = !!matchedLeftItem;
+
+                  let borderStyle = 'border-[#1e3a8a]/20';
+                  let glowStyle = '';
+
+                  if (isMatched) {
+                    borderStyle = 'border-emerald-400 bg-emerald-50/10';
+                  }
+
+                  if (graded && matchedLeftItem) {
+                    const isCorrect = matchedLeftItem.amount === curr.amount;
+                    borderStyle = isCorrect ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-rose-400 ring-2 ring-rose-100';
+                  }
+
+                  return (
+                    <button
+                      key={`right-${curr.id}`}
+                      onClick={() => {
+                        if (selectedLeftId) {
+                          updateAnswer(`currency-${selectedLeftId}`, banknoteId);
+                          setSelectedLeftId(null);
+                        } else if (isMatched) {
+                          const matchedLeftId = worksheet.currencyItems?.find(
+                            (leftItem) => studentAnswers[`currency-${leftItem.id}`] === banknoteId
+                          )?.id;
+                          if (matchedLeftId) {
+                            updateAnswer(`currency-${matchedLeftId}`, undefined);
+                          }
+                        }
+                      }}
+                      className={`w-full h-24 rounded-2xl border-2 p-1 bg-white flex items-center gap-3 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md ${borderStyle} ${glowStyle}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full border-3 flex-shrink-0 ml-1 transition-all ${
+                        isMatched ? 'bg-emerald-500 border-white shadow-sm' : 'bg-white border-[#1e3a8a]/30'
+                      }`}></div>
+
+                      <div className="flex-1 flex items-center justify-center overflow-hidden">
+                        <BanknoteVisual amount={curr.amount} className="w-full h-full" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

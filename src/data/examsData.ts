@@ -38,7 +38,7 @@ export const examList: ExamMeta[] = [
   },
 ];
 
-export const examsData: Record<ExamId, WorksheetData> = {
+export const examsData: Partial<Record<ExamId, WorksheetData>> = {
   exam1: {
     examId: 'exam1',
     title: 'Revision Part (1) - Mathematics',
@@ -614,6 +614,17 @@ export const examsData: Record<ExamId, WorksheetData> = {
       { id: 'ex5-sml-1', type: 'smallest', numbers: [6, 2, 4, 7], correctAnswer: 2 },
       { id: 'ex5-sml-2', type: 'smallest', numbers: [8, 0, 3, 5], correctAnswer: 0 },
       { id: 'ex5-sml-3', type: 'smallest', numbers: [1, 6, 7, 9], correctAnswer: 1 },
+    ],
+  },
+
+  exam6: {
+    examId: 'exam6',
+    title: 'Revision Part (6) - Mathematics',
+    term: 'Kindergarten Level Two | Second Term',
+    grade: 'Math KG2',
+    teacherName: 'Mrs. Maryan Malak (Math Teacher)',
+    simpleAdditions: [
+      { id: 'ex6-add-1', expr: '5 + 5 =', correctVal: 10 },
     ],
   },
 
