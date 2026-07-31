@@ -751,7 +751,13 @@ export const PrintableWorksheet: React.FC<PrintableWorksheetProps> = ({
 
           <button
             type="button"
-            onClick={() => downloadPDF(viewMode === 'full' ? 'KG2_Math_Revision_Booklet' : (activeWorksheet.title || 'Math_Worksheet'))}
+            onClick={() =>
+              downloadPDF(
+                viewMode === 'full'
+                  ? `${(activeWorksheet.grade || 'KG2').replace(/\s+/g, '_')}_Complete_Math_Booklet`
+                  : `${(activeWorksheet.grade || 'KG2').replace(/\s+/g, '_')}_${(activeWorksheet.title || 'Math_Worksheet').replace(/\s+/g, '_')}`
+              )
+            }
             className="px-5 py-2 bg-[#f59e0b] hover:bg-amber-400 text-[#0f172a] rounded-xl text-xs font-serif font-black shadow-[3px_3px_0px_#0f172a] flex items-center gap-2 transition-all transform hover:scale-105 cursor-pointer no-print"
           >
             <Download size={15} /> Save / Print PDF
@@ -760,7 +766,7 @@ export const PrintableWorksheet: React.FC<PrintableWorksheetProps> = ({
       </div>
 
       {/* Render Single Active Revision or All 5 Parts */}
-      <div className="w-full max-w-4xl flex flex-col items-center">
+      <div id="printable-worksheet" className="w-full max-w-4xl flex flex-col items-center">
         {viewMode === 'single' ? (
           renderSingleExam(activeWorksheet)
         ) : (
