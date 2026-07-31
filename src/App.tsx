@@ -5,25 +5,33 @@
 
 import React, { useState } from 'react';
 import { defaultWorksheet } from './data/defaultWorksheet';
-import { WorksheetData, StudentInfo, QuestionGradeResult, ExamId } from './types';
-import { examsData } from './data/examsData';
+import { WorksheetData, StudentInfo, QuestionGradeResult, ExamId, GradeId } from './types';
+import { bookletsData, gradeList } from './data/bookletsData';
 import { Header } from './components/Header';
 import { InteractiveMode } from './components/InteractiveMode';
 import { PrintableWorksheet } from './components/PrintableWorksheet';
 import { WorksheetGenerator } from './components/WorksheetGenerator';
 import { ScoreModal } from './components/ScoreModal';
-import { triggerPrint } from './utils/pdfPrint';
 
 export default function App() {
   const [mode, setMode] = useState<'interactive' | 'printable' | 'generator'>('interactive');
+  const [currentGradeId, setCurrentGradeId] = useState<GradeId>('kg2');
   const [currentExamId, setCurrentExamId] = useState<ExamId>('exam1');
-  const [worksheet, setWorksheet] = useState<WorksheetData>(examsData['exam1'] || defaultWorksheet);
+
+  const currentGradeBooklet = bookletsData[currentGradeId] || bookletsData.kg2;
+  const currentExamList = currentGradeBooklet.examList;
+
+  const initialWorksheet = currentGradeBooklet.examsData['exam1'] || defaultWorksheet;
+  const [worksheet, setWorksheet] = useState<WorksheetData>(initialWorksheet);
+
   const [showAnswers, setShowAnswers] = useState<boolean>(false);
   const [studentAnswers, setStudentAnswers] = useState<Record<string, any>>({});
 
+  const activeGradeMeta = gradeList.find((g) => g.id === currentGradeId) || gradeList[1];
+
   const [studentInfo, setStudentInfo] = useState<StudentInfo>({
     name: '',
-    classGroup: 'KG2-A',
+    classGroup: `${activeGradeMeta.label}-A`,
     date: new Date().toISOString().split('T')[0],
     teacherName: 'Mrs. Maryan Malak (Math Teacher)',
   });
@@ -39,7 +47,7 @@ export default function App() {
   const handleDirectDownload = () => {
     try {
       const originalTitle = document.title;
-      document.title = 'المذكرة_الكاملة_PDF';
+      document.title = `${currentGradeId.toUpperCase()}_Math_Revision_Booklet`;
       window.print();
       setTimeout(() => {
         document.title = originalTitle;
@@ -49,10 +57,27 @@ export default function App() {
     }
   };
 
+  const handleSelectGrade = (newGradeId: GradeId) => {
+    setCurrentGradeId(newGradeId);
+    setCurrentExamId('exam1');
+    const newGradeBooklet = bookletsData[newGradeId] || bookletsData.kg2;
+    const newGradeMeta = gradeList.find((g) => g.id === newGradeId) || gradeList[1];
+    const newWorksheet = newGradeBooklet.examsData['exam1'] || defaultWorksheet;
+
+    setWorksheet(newWorksheet);
+    setStudentAnswers({});
+    setScoreData(null);
+    setStudentInfo((prev) => ({
+      ...prev,
+      classGroup: `${newGradeMeta.label}-A`,
+    }));
+  };
+
   const handleSelectExam = (examId: ExamId) => {
     setCurrentExamId(examId);
-    if (examsData[examId]) {
-      setWorksheet(examsData[examId]);
+    const selected = currentGradeBooklet.examsData[examId];
+    if (selected) {
+      setWorksheet(selected);
       setStudentAnswers({});
       setScoreData(null);
     }
@@ -85,7 +110,10 @@ export default function App() {
         setShowAnswers={setShowAnswers}
         onPrint={handleDirectDownload}
         onDownloadPDF={handleDirectDownload}
+        currentGradeId={currentGradeId}
+        onSelectGrade={handleSelectGrade}
         currentExamId={currentExamId}
+        examList={currentExamList}
         onSelectExam={handleSelectExam}
         score={scoreData?.score}
         maxScore={scoreData?.maxScore}
@@ -127,7 +155,7 @@ export default function App() {
             Instructor <span className="font-serif italic font-medium text-[#f59e0b]">Mrs. Maryan Malak</span> &bull; Mathematics Excellence Program
           </p>
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">
-            Kindergarten Level Two • Second Term Revision
+            {activeGradeMeta.fullName} &bull; {activeGradeMeta.term}
           </p>
         </div>
       </footer>
@@ -142,7 +170,6 @@ export default function App() {
           onReset={handleReset}
         />
       )}
-
     </div>
   );
 }

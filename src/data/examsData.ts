@@ -661,3 +661,8 @@ export const examsData: Record<ExamId, WorksheetData> = {
     smallestNumberSets: [],
   },
 };
+
+import { bookletsData } from './bookletsData';
+bookletsData.kg2.examsData = examsData;
+
+export { bookletsData };

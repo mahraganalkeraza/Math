@@ -1,9 +1,8 @@
 import React, { useRef } from 'react';
-import { Download, Sparkles, Edit3, Eye, CheckCircle2, User, Volume2, FileText } from 'lucide-react';
-import { StudentInfo, ExamId } from '../types';
-import { examList } from '../data/examsData';
+import { Download, Sparkles, Edit3, Eye, CheckCircle2, User, Volume2, FileText, GraduationCap } from 'lucide-react';
+import { StudentInfo, ExamId, GradeId, ExamMeta } from '../types';
+import { gradeList } from '../data/bookletsData';
 import { speakText } from '../utils/speech';
-import { downloadPDF } from '../utils/pdfPrint';
 
 interface HeaderProps {
   mode: 'interactive' | 'printable' | 'generator';
@@ -14,7 +13,10 @@ interface HeaderProps {
   setShowAnswers: (show: boolean) => void;
   onPrint?: () => void;
   onDownloadPDF?: () => void;
+  currentGradeId: GradeId;
+  onSelectGrade: (gradeId: GradeId) => void;
   currentExamId: ExamId;
+  examList: ExamMeta[];
   onSelectExam: (examId: ExamId) => void;
   score?: number;
   maxScore?: number;
@@ -29,15 +31,20 @@ export const Header: React.FC<HeaderProps> = ({
   setShowAnswers,
   onPrint,
   onDownloadPDF,
+  currentGradeId,
+  onSelectGrade,
   currentExamId,
+  examList,
   onSelectExam,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const activeGradeMeta = gradeList.find((g) => g.id === currentGradeId) || gradeList[1];
+
   const handleDirectDownload = () => {
     try {
       const originalTitle = document.title;
-      document.title = 'المذكرة_الكاملة_PDF';
+      document.title = `${currentGradeId.toUpperCase()}_Math_Revision_Booklet`;
       window.print();
       setTimeout(() => {
         document.title = originalTitle;
@@ -58,6 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
     handleDirectDownload();
   };
+
   return (
     <header className="no-print bg-[#1e3a8a] text-white border-b-4 border-[#f59e0b] sticky top-0 z-50 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -65,8 +73,8 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Main Header Bar */}
         <div className="py-3 flex flex-col lg:flex-row items-center justify-between gap-4 border-b border-white/10">
           
-          {/* Logo & Teacher Branding */}
-          <div className="flex items-center gap-4">
+          {/* Logo, Grade Selector & Teacher Branding */}
+          <div className="flex flex-wrap items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-[#f59e0b] text-[#0f172a] flex items-center justify-center font-serif font-black text-2xl shadow-[3px_3px_0px_#0f172a] shrink-0">
               M
             </div>
@@ -76,12 +84,29 @@ export const Header: React.FC<HeaderProps> = ({
                   MATH <span className="text-white italic font-serif">PRACTICE</span>
                 </h1>
                 <span className="bg-[#f59e0b] text-[#0f172a] font-bold text-[10px] px-2 py-0.5 rounded uppercase tracking-wider">
-                  KG2 Term 2
+                  {activeGradeMeta.label} Revision
                 </span>
               </div>
               <p className="text-xs text-slate-200 uppercase tracking-widest font-semibold text-[11px] opacity-90">
                 Instructor: <span className="font-serif italic font-medium text-amber-300 capitalize text-xs">{studentInfo.teacherName || 'Mrs. Maryan Malak'}</span>
               </p>
+            </div>
+
+            {/* Grade Selection Dropdown */}
+            <div className="ml-2 flex items-center gap-1.5 bg-[#0f172a] border-2 border-[#f59e0b] px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_#f59e0b]">
+              <GraduationCap size={18} className="text-[#f59e0b] shrink-0" />
+              <span className="text-[11px] font-black text-amber-300 uppercase tracking-wider hidden sm:inline">Grade:</span>
+              <select
+                value={currentGradeId}
+                onChange={(e) => onSelectGrade(e.target.value as GradeId)}
+                className="bg-transparent text-white font-black text-xs focus:outline-none cursor-pointer pr-1"
+              >
+                {gradeList.map((g) => (
+                  <option key={g.id} value={g.id} className="bg-[#0f172a] text-white font-bold">
+                    {g.label} ({g.fullName})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -121,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
             
             {/* Speech Helper */}
             <button
-              onClick={() => speakText('Welcome to Kindergarten Math Revision Worksheets with Mrs. Maryan Malak!')}
+              onClick={() => speakText(`Welcome to ${activeGradeMeta.fullName} Math Revision Worksheets with Mrs. Maryan Malak!`)}
               title="Listen to introduction"
               className="p-2 text-slate-200 hover:text-[#f59e0b] hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
             >
@@ -191,27 +216,51 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Revision Switcher Bar */}
-        <div className="py-2.5 flex items-center overflow-x-auto gap-2 scrollbar-none">
-          <span className="text-[11px] font-serif font-bold text-[#f59e0b] uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
-            <FileText size={14} /> Revision Parts:
-          </span>
-          {examList.map((exam) => {
-            const isSelected = currentExamId === exam.id;
-            return (
-              <button
-                key={exam.id}
-                onClick={() => onSelectExam(exam.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 border ${
-                  isSelected
-                    ? 'bg-white text-[#1e3a8a] border-[#f59e0b] shadow-[2px_2px_0px_#f59e0b] font-black'
-                    : 'bg-blue-900/60 text-slate-200 border-white/10 hover:bg-blue-800 hover:text-white'
-                }`}
-              >
-                <span>{exam.title}</span>
-              </button>
-            );
-          })}
+        {/* Revision Switcher Bar & Grade Tabs */}
+        <div className="py-2.5 flex flex-wrap items-center justify-between gap-3 overflow-x-auto scrollbar-none">
+          {/* Grade Quick Selector Pills */}
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mr-1 hidden md:inline">Grade:</span>
+            {gradeList.map((g) => {
+              const isActive = g.id === currentGradeId;
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => onSelectGrade(g.id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-[#f59e0b] text-[#0f172a] shadow-[2px_2px_0px_#0f172a]'
+                      : 'bg-white/10 text-slate-200 hover:bg-white/20'
+                  }`}
+                >
+                  {g.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Revision Parts List */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            <span className="text-[11px] font-serif font-bold text-[#f59e0b] uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
+              <FileText size={14} /> Revision Parts:
+            </span>
+            {examList.map((exam) => {
+              const isSelected = currentExamId === exam.id;
+              return (
+                <button
+                  key={exam.id}
+                  onClick={() => onSelectExam(exam.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 border ${
+                    isSelected
+                      ? 'bg-white text-[#1e3a8a] border-[#f59e0b] shadow-[2px_2px_0px_#f59e0b] font-black'
+                      : 'bg-blue-900/60 text-slate-200 border-white/10 hover:bg-blue-800 hover:text-white'
+                  }`}
+                >
+                  <span>{exam.title}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
       </div>

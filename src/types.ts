@@ -6,6 +6,16 @@ export interface StudentInfo {
 }
 
 export type ExamId = 'exam1' | 'exam2' | 'exam3' | 'exam4' | 'exam5' | 'custom';
+export type GradeId = 'kg1' | 'kg2' | 'g1' | 'g2' | 'g3' | 'g4';
+
+export interface GradeMeta {
+  id: GradeId;
+  label: string;
+  fullName: string;
+  term: string;
+  description: string;
+  badgeColor: string;
+}
 
 export interface ExamMeta {
   id: ExamId;
