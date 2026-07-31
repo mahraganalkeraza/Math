@@ -1,0 +1,6 @@
+{
+  "name": "Math Practice Guide - Math KG2",
+  "description": "Interactive Kindergarten Level Two Math Practice Guide & Printable Worksheet by Mrs. Maryan Malak with auto-grading, interactive exercises, and A4 printable PDF view.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
