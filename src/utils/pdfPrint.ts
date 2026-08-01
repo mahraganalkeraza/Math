@@ -96,47 +96,36 @@ export function convertOklchAndOklabToSafeColor(colorStr: string): string {
 }
 
 /**
- * Parses CSS text and recursively replaces oklch, oklab, lab, lch, and color-mix functions
- * with safe HEX/RGB/RGBA formats, properly handling nested parentheses.
+ * Parses CSS text and replaces oklch, oklab, lab, lch, and color-mix functions
+ * with safe HEX/RGB/RGBA formats using extremely fast and robust regex patterns.
  */
 export function replaceModernColorFunctions(cssText: string): string {
-  const targets = ['oklch(', 'oklab(', 'lab(', 'lch(', 'color-mix('];
   let result = cssText;
 
-  for (const target of targets) {
-    let index = result.indexOf(target);
-    while (index !== -1) {
-      const startIdx = index;
-      const parenStart = index + target.length;
-      let depth = 1;
-      let endIdx = parenStart;
+  // 1. Replace oklch
+  result = result.replace(/oklch\s*\(([^)]+)\)/gi, (match) => {
+    return convertOklchAndOklabToSafeColor(match);
+  });
 
-      while (endIdx < result.length && depth > 0) {
-        const char = result[endIdx];
-        if (char === '(') depth++;
-        else if (char === ')') depth--;
-        endIdx++;
-      }
+  // 2. Replace oklab
+  result = result.replace(/oklab\s*\(([^)]+)\)/gi, (match) => {
+    return convertOklchAndOklabToSafeColor(match);
+  });
 
-      if (depth === 0) {
-        // We found the full matched function block (supports nesting)
-        const fullMatch = result.substring(startIdx, endIdx);
-        let safeColor = '';
-        if (target === 'color-mix(') {
-          safeColor = convertColorMixToSafeColor(fullMatch);
-        } else {
-          safeColor = convertOklchAndOklabToSafeColor(fullMatch);
-        }
-        // Replace it in the result string
-        result = result.substring(0, startIdx) + safeColor + result.substring(endIdx);
-        // Search again from the same or next position
-        index = result.indexOf(target, startIdx + safeColor.length);
-      } else {
-        // Unmatched parenthesis, break to avoid infinite loop
-        break;
-      }
-    }
-  }
+  // 3. Replace lab
+  result = result.replace(/lab\s*\(([^)]+)\)/gi, (match) => {
+    return convertOklchAndOklabToSafeColor(match);
+  });
+
+  // 4. Replace lch
+  result = result.replace(/lch\s*\(([^)]+)\)/gi, (match) => {
+    return convertOklchAndOklabToSafeColor(match);
+  });
+
+  // 5. Replace color-mix
+  result = result.replace(/color-mix\s*\(([^)]+)\)/gi, (match) => {
+    return convertColorMixToSafeColor(match);
+  });
 
   return result;
 }
@@ -301,6 +290,28 @@ export async function downloadPDF(
           (el as HTMLElement).style.display = 'none';
         });
 
+        // Sanitize external link stylesheets by fetching and inlining them as safe style tags
+        const origin = window.location.origin;
+        const linkSheets = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
+        linkSheets.forEach((link) => {
+          try {
+            const href = link.getAttribute('href');
+            if (href && (href.startsWith('/') || href.startsWith(origin))) {
+              const xhr = new XMLHttpRequest();
+              xhr.open('GET', href, false); // Synchronous fetch
+              xhr.send(null);
+              if (xhr.status === 200) {
+                const style = clonedDoc.createElement('style');
+                style.textContent = replaceModernColorFunctions(xhr.responseText);
+                clonedDoc.head.appendChild(style);
+                link.remove();
+              }
+            }
+          } catch (e) {
+            console.error('Failed to inline and sanitize external stylesheet:', e);
+          }
+        });
+
         // Sanitize <style> tags in cloned document to completely bypass html2canvas parser crash
         const styleTags = clonedDoc.querySelectorAll('style');
         styleTags.forEach((styleTag) => {
@@ -313,6 +324,67 @@ export async function downloadPDF(
             cssText.includes('color-mix')
           ) {
             styleTag.textContent = replaceModernColorFunctions(cssText);
+          }
+        });
+
+        // Sanitize ALL elements in the cloned document to completely prevent oklch parser leaks
+        const allClonedElements = clonedDoc.querySelectorAll<HTMLElement>('*');
+        allClonedElements.forEach((el) => {
+          try {
+            // 1. Sanitize standard fill/stroke attributes
+            const fillAttr = el.getAttribute('fill');
+            if (fillAttr && (fillAttr.includes('oklch') || fillAttr.includes('oklab') || fillAttr.includes('color-mix') || fillAttr.includes('lab') || fillAttr.includes('lch'))) {
+              el.setAttribute('fill', toCanvasSafeColor(fillAttr));
+            }
+            const strokeAttr = el.getAttribute('stroke');
+            if (strokeAttr && (strokeAttr.includes('oklch') || strokeAttr.includes('oklab') || strokeAttr.includes('color-mix') || strokeAttr.includes('lab') || strokeAttr.includes('lch'))) {
+              el.setAttribute('stroke', toCanvasSafeColor(strokeAttr));
+            }
+
+            // 2. Resolve computed styles and set them as inline overrides
+            if (el.style) {
+              // Sanitize existing inline style properties
+              for (let i = 0; i < el.style.length; i++) {
+                const key = el.style[i];
+                const val = el.style.getPropertyValue(key);
+                if (val && (
+                  val.includes('oklch') ||
+                  val.includes('oklab') ||
+                  val.includes('color-mix') ||
+                  val.includes('lab') ||
+                  val.includes('lch')
+                )) {
+                  el.style.setProperty(key, toCanvasSafeColor(val), 'important');
+                }
+              }
+
+              // Read and override computed style properties inline
+              const computed = window.getComputedStyle(el);
+              const colorProps = [
+                'color',
+                'background-color',
+                'border-color',
+                'border-top-color',
+                'border-right-color',
+                'border-bottom-color',
+                'border-left-color',
+                'outline-color',
+              ];
+              for (const prop of colorProps) {
+                const val = computed.getPropertyValue(prop);
+                if (val && (
+                  val.includes('oklch') ||
+                  val.includes('oklab') ||
+                  val.includes('color-mix') ||
+                  val.includes('lab') ||
+                  val.includes('lch')
+                )) {
+                  el.style.setProperty(prop, toCanvasSafeColor(val), 'important');
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore element-specific errors
           }
         });
 
